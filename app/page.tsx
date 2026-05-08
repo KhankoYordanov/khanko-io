@@ -34,17 +34,8 @@ export default function HomePage() {
               marginBottom: 10,
             }}
           />
-
           <br />
-
-          <button
-            type="submit"
-            style={{
-              padding: "12px 20px",
-              fontSize: 16,
-              cursor: "pointer",
-            }}
-          >
+          <button type="submit" style={{ padding: "12px 20px", fontSize: 16 }}>
             Export DOCX
           </button>
         </form>
@@ -63,18 +54,29 @@ export default function HomePage() {
               marginBottom: 10,
             }}
           />
-
           <br />
-
-          <button
-            type="submit"
-            style={{
-              padding: "12px 20px",
-              fontSize: 16,
-              cursor: "pointer",
-            }}
-          >
+          <button type="submit" style={{ padding: "12px 20px", fontSize: 16 }}>
             Export XLSX
+          </button>
+        </form>
+
+        <form method="POST" action="/api/export-translation-xlsx">
+          <input
+            name="url"
+            type="url"
+            placeholder="https://example.com"
+            required
+            style={{
+              width: "100%",
+              maxWidth: 600,
+              padding: 12,
+              fontSize: 16,
+              marginBottom: 10,
+            }}
+          />
+          <br />
+          <button type="submit" style={{ padding: "12px 20px", fontSize: 16 }}>
+            Export Translation XLSX
           </button>
         </form>
       </div>

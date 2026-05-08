@@ -51,6 +51,41 @@ async function getSitemapUrls(baseUrl: URL) {
   }
 }
 
+function extractInternalLinks(html: string, baseUrl: URL) {
+  const $ = cheerio.load(html);
+
+  const links = $("a")
+    .map((_, el) => $(el).attr("href"))
+    .get()
+    .filter(Boolean);
+
+  const internalLinks = new Set<string>();
+
+  for (const href of links) {
+    try {
+      const fullUrl = new URL(href!, baseUrl);
+
+      fullUrl.hash = "";
+
+      if (fullUrl.hostname !== baseUrl.hostname) continue;
+
+      if (
+        /\.(pdf|jpg|jpeg|png|gif|webp|zip|mp4|mp3|svg|css|js)$/i.test(
+          fullUrl.pathname
+        )
+      ) {
+        continue;
+      }
+
+      internalLinks.add(fullUrl.toString());
+    } catch {
+      continue;
+    }
+  }
+
+  return Array.from(internalLinks).slice(0, 20);
+}
+
 function extractSEO(html: string) {
   const $ = cheerio.load(html);
 
@@ -130,6 +165,9 @@ export async function POST(req: Request) {
 
     const baseUrl = new URL(url);
 
+    const visited = new Set<string>();
+    const queued = new Set<string>();
+
     let urlsToVisit = await getSitemapUrls(baseUrl);
 
     if (urlsToVisit.length === 0) {
@@ -138,7 +176,8 @@ export async function POST(req: Request) {
 
     urlsToVisit = Array.from(new Set(urlsToVisit)).slice(0, 20);
 
-    const visited = new Set<string>();
+    urlsToVisit.forEach((item) => queued.add(item));
+
     const titles: string[] = [];
 
     let errors = 0;
@@ -166,6 +205,19 @@ export async function POST(req: Request) {
         if (seo.title) {
           titles.push(seo.title);
         }
+
+        const internalLinks = extractInternalLinks(html, baseUrl);
+
+        internalLinks.forEach((link) => {
+          if (
+            !visited.has(link) &&
+            !queued.has(link) &&
+            urlsToVisit.length + visited.size < 20
+          ) {
+            urlsToVisit.push(link);
+            queued.add(link);
+          }
+        });
       } catch {
         errors++;
       }

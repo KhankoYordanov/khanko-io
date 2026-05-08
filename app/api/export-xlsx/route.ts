@@ -12,9 +12,55 @@ function cleanText(text: string) {
 
 function isUsefulText(text: string) {
   const cleaned = cleanText(text);
+  const lower = cleaned.toLowerCase();
 
-  if (cleaned.length < 40) return false;
+  if (cleaned.length < 45) return false;
   if (cleaned.length > 5000) return false;
+
+  const noiseWords = [
+    "cookie",
+    "cookies",
+    "privacy policy",
+    "terms of use",
+    "terms and conditions",
+    "accept all",
+    "reject all",
+    "subscribe",
+    "newsletter",
+    "sign up",
+    "login",
+    "log in",
+    "menu",
+    "navigation",
+    "copyright",
+    "all rights reserved",
+    "read more",
+    "learn more",
+    "get started",
+    "contact us",
+    "follow us",
+    "share this",
+    "back to top",
+  ];
+
+  if (noiseWords.some((word) => lower.includes(word))) return false;
+
+  const words = cleaned.split(/\s+/).filter(Boolean);
+
+  if (words.length < 8) return false;
+
+  const uniqueWords = new Set(words.map((word) => word.toLowerCase()));
+
+  if (uniqueWords.size / words.length < 0.45) return false;
+
+  const linkLikeCount = words.filter(
+    (word) =>
+      word.includes("http") ||
+      word.includes(".com") ||
+      word.includes("@")
+  ).length;
+
+  if (linkLikeCount > 2) return false;
 
   return true;
 }
@@ -82,18 +128,29 @@ function extractContent(html: string) {
   ).remove();
 
   const title = cleanText($("title").first().text()) || "Website Export";
-
   const h1 = cleanText($("h1").first().text());
 
   const metaDescription = cleanText(
     $("meta[name='description']").attr("content") || ""
   );
 
+  const seen = new Set<string>();
+
   const paragraphs = $("main p, article p, section p, p")
     .map((_, el) => cleanText($(el).text()))
     .get()
-    .filter((text) => isUsefulText(text))
-    .slice(0, 40);
+    .filter((text) => {
+      if (!isUsefulText(text)) return false;
+
+      const key = text.toLowerCase();
+
+      if (seen.has(key)) return false;
+
+      seen.add(key);
+
+      return true;
+    })
+    .slice(0, 60);
 
   const content = paragraphs.join("\n\n");
 

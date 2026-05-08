@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 import * as XLSX from "xlsx";
-import { fetchRenderedHtml } from "@/app/lib/fetchRenderedHtml";
+import { fetchRenderedHtml } from "../../lib/fetchRenderedHtml";
 
 function cleanText(text: string) {
   return text

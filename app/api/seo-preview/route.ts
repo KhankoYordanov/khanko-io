@@ -1,25 +1,19 @@
 import { NextResponse } from "next/server";
-import axios from "axios";
 import * as cheerio from "cheerio";
+import { fetchRenderedHtml } from "../../lib/fetchRenderedHtml";
 
 function cleanText(text: string) {
   return text.replace(/\s+/g, " ").replace(/\u00a0/g, " ").trim();
 }
 
 async function fetchHtml(url: string) {
-  const response = await axios.get(url, {
-    timeout: 15000,
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; KHANKO.io SEO Preview/1.0)",
-    },
-  });
-
-  return response.data;
+  return await fetchRenderedHtml(url);
 }
 
 async function getSitemapUrls(baseUrl: URL) {
   try {
     const sitemapUrl = `${baseUrl.origin}/sitemap.xml`;
+
     const xml = await fetchHtml(sitemapUrl);
 
     return Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g))
@@ -41,8 +35,12 @@ async function getSitemapUrls(baseUrl: URL) {
 function extractSEO(html: string) {
   const $ = cheerio.load(html);
 
+  $("script, style, noscript").remove();
+
   const title = cleanText($("title").first().text());
+
   const h1 = cleanText($("h1").first().text());
+
   const metaDescription = cleanText(
     $("meta[name='description']").attr("content") || ""
   );
@@ -53,21 +51,34 @@ function extractSEO(html: string) {
     .filter((text) => text.length > 40);
 
   const content = paragraphs.join(" ");
-  const wordCount = content ? content.split(/\s+/).filter(Boolean).length : 0;
 
-  return { title, h1, metaDescription, wordCount };
+  const wordCount = content
+    ? content.split(/\s+/).filter(Boolean).length
+    : 0;
+
+  return {
+    title,
+    h1,
+    metaDescription,
+    wordCount,
+  };
 }
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
+
     const url = formData.get("url") as string;
 
     if (!url) {
-      return NextResponse.json({ error: "Missing URL" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing URL" },
+        { status: 400 }
+      );
     }
 
     const baseUrl = new URL(url);
+
     let urlsToVisit = await getSitemapUrls(baseUrl);
 
     if (urlsToVisit.length === 0) {
@@ -75,7 +86,9 @@ export async function POST(req: Request) {
     }
 
     const visited = new Set<string>();
+
     const titles: string[] = [];
+
     let errors = 0;
     let thinPages = 0;
     let missingTitles = 0;
@@ -86,25 +99,39 @@ export async function POST(req: Request) {
       const currentUrl = urlsToVisit.shift()!;
 
       if (visited.has(currentUrl)) continue;
+
       visited.add(currentUrl);
 
       try {
         const html = await fetchHtml(currentUrl);
+
         const seo = extractSEO(html);
 
         if (!seo.title) missingTitles++;
-        if (!seo.h1) missingH1++;
-        if (!seo.metaDescription) missingMetaDescriptions++;
-        if (seo.wordCount < 150) thinPages++;
 
-        if (seo.title) titles.push(seo.title);
+        if (!seo.h1) missingH1++;
+
+        if (!seo.metaDescription) {
+          missingMetaDescriptions++;
+        }
+
+        if (seo.wordCount < 150) {
+          thinPages++;
+        }
+
+        if (seo.title) {
+          titles.push(seo.title);
+        }
       } catch {
         errors++;
       }
     }
 
     const duplicateTitles =
-      titles.length - new Set(titles.map((title) => title.toLowerCase())).size;
+      titles.length -
+      new Set(
+        titles.map((title) => title.toLowerCase())
+      ).size;
 
     return NextResponse.json({
       pagesChecked: visited.size,

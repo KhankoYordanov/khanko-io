@@ -15,15 +15,24 @@ type SeoPreview = {
   discoveredUrls: string[];
 };
 
+function formatDiscoveredUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const path = `${parsed.pathname}${parsed.search}`;
+
+    return path === "/" ? "/" : path;
+  } catch {
+    return url;
+  }
+}
+
 export default function HomePage() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const [preview, setPreview] = useState<SeoPreview | null>(null);
 
-  async function handleSeoPreview(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
+  async function handleSeoPreview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setPreviewLoading(true);
@@ -43,16 +52,12 @@ export default function HomePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Failed to analyze website"
-        );
+        throw new Error(data.error || "Failed to analyze website");
       }
 
       setPreview(data);
     } catch {
-      setPreviewError(
-        "Failed to analyze website. Try another URL."
-      );
+      setPreviewError("Failed to analyze website. Try another URL.");
     } finally {
       setPreviewLoading(false);
     }
@@ -102,9 +107,8 @@ export default function HomePage() {
             marginTop: 22,
           }}
         >
-          Crawl website pages, extract readable content, and export
-          structured files for translation, SEO audits, AI datasets,
-          and content migration.
+          Crawl website pages, extract readable content, and export structured
+          files for translation, SEO audits, AI datasets, and content migration.
         </p>
 
         <div
@@ -118,8 +122,8 @@ export default function HomePage() {
             maxWidth: 760,
           }}
         >
-          Current MVP limits: up to 20 sitemap URLs, same-domain
-          crawling only, static + rendered HTML extraction.
+          Current MVP limits: up to 20 sitemap URLs, same-domain crawling only,
+          static + rendered HTML extraction.
         </div>
 
         <section
@@ -132,26 +136,16 @@ export default function HomePage() {
             boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
           }}
         >
-          <h2 style={{ marginTop: 0, fontSize: 26 }}>
-            SEO Preview
-          </h2>
+          <h2 style={{ marginTop: 0, fontSize: 26 }}>SEO Preview</h2>
 
-          <p
-            style={{
-              color: "#cbd5e1",
-              lineHeight: 1.55,
-            }}
-          >
-            Analyze a website before exporting the full SEO audit
-            spreadsheet.
+          <p style={{ color: "#cbd5e1", lineHeight: 1.55 }}>
+            Analyze a website before exporting the full SEO audit spreadsheet.
           </p>
 
           <form onSubmit={handleSeoPreview}>
             <input
               value={previewUrl}
-              onChange={(event) =>
-                setPreviewUrl(event.target.value)
-              }
+              onChange={(event) => setPreviewUrl(event.target.value)}
               type="url"
               placeholder="https://example.com"
               required
@@ -176,30 +170,19 @@ export default function HomePage() {
                 padding: "13px 16px",
                 borderRadius: 12,
                 border: "none",
-                background: previewLoading
-                  ? "#64748b"
-                  : "#22c55e",
+                background: previewLoading ? "#64748b" : "#22c55e",
                 color: "#020617",
                 fontWeight: 700,
                 fontSize: 15,
-                cursor: previewLoading
-                  ? "not-allowed"
-                  : "pointer",
+                cursor: previewLoading ? "not-allowed" : "pointer",
               }}
             >
-              {previewLoading
-                ? "Analyzing..."
-                : "Analyze Website"}
+              {previewLoading ? "Analyzing..." : "Analyze Website"}
             </button>
           </form>
 
           {previewError && (
-            <p
-              style={{
-                color: "#f87171",
-                marginTop: 16,
-              }}
-            >
+            <p style={{ color: "#f87171", marginTop: 16 }}>
               {previewError}
             </p>
           )}
@@ -237,92 +220,53 @@ export default function HomePage() {
                   {preview.status}
                 </div>
 
-                <div style={{ color: "#dbeafe" }}>
-                  {preview.message}
-                </div>
+                <div style={{ color: "#dbeafe" }}>{preview.message}</div>
               </div>
 
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(150px, 1fr))",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
                   gap: 12,
                   marginTop: 22,
                 }}
               >
-                <Metric
-                  label="Pages checked"
-                  value={preview.pagesChecked}
-                />
-
-                <Metric
-                  label="Errors"
-                  value={preview.errors}
-                />
-
-                <Metric
-                  label="Thin pages"
-                  value={preview.thinPages}
-                />
-
-                <Metric
-                  label="Missing titles"
-                  value={preview.missingTitles}
-                />
-
-                <Metric
-                  label="Missing H1"
-                  value={preview.missingH1}
-                />
-
+                <Metric label="Pages checked" value={preview.pagesChecked} />
+                <Metric label="Errors" value={preview.errors} />
+                <Metric label="Thin pages" value={preview.thinPages} />
+                <Metric label="Missing titles" value={preview.missingTitles} />
+                <Metric label="Missing H1" value={preview.missingH1} />
                 <Metric
                   label="Missing meta"
                   value={preview.missingMetaDescriptions}
                 />
-
                 <Metric
                   label="Duplicate titles"
                   value={preview.duplicateTitles}
                 />
               </div>
 
-              <div
-                style={{
-                  marginTop: 28,
-                }}
-              >
-                <h3
-                  style={{
-                    marginBottom: 14,
-                    fontSize: 18,
-                  }}
-                >
+              <div style={{ marginTop: 28 }}>
+                <h3 style={{ marginBottom: 14, fontSize: 18 }}>
                   Discovered Pages
                 </h3>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gap: 10,
-                  }}
-                >
+                <div style={{ display: "grid", gap: 10 }}>
                   {preview.discoveredUrls.map((url) => (
                     <div
                       key={url}
+                      title={url}
                       style={{
                         padding: "12px 14px",
                         borderRadius: 12,
-                        background:
-                          "rgba(2, 6, 23, 0.55)",
-                        border:
-                          "1px solid rgba(148,163,184,0.18)",
+                        background: "rgba(2, 6, 23, 0.55)",
+                        border: "1px solid rgba(148,163,184,0.18)",
                         overflowWrap: "break-word",
                         color: "#cbd5e1",
                         fontSize: 14,
                       }}
                     >
-                      {url}
+                      {formatDiscoveredUrl(url)}
                     </div>
                   ))}
                 </div>
@@ -334,8 +278,7 @@ export default function HomePage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(260px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: 20,
             marginTop: 40,
           }}
@@ -369,22 +312,15 @@ export default function HomePage() {
           />
         </div>
 
-        <div
-          style={{
-            marginTop: 28,
-            color: "#94a3b8",
-          }}
-        >
-          Try examples: https://example.com or
-          https://khanko.tools
+        <div style={{ marginTop: 28, color: "#94a3b8" }}>
+          Try examples: https://example.com or https://khanko.tools
         </div>
 
         <div
           style={{
             marginTop: 44,
             display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             gap: 16,
           }}
         >
@@ -413,8 +349,7 @@ export default function HomePage() {
           style={{
             marginTop: 56,
             paddingTop: 24,
-            borderTop:
-              "1px solid rgba(148, 163, 184, 0.18)",
+            borderTop: "1px solid rgba(148, 163, 184, 0.18)",
             color: "#64748b",
             fontSize: 14,
           }}
@@ -426,31 +361,17 @@ export default function HomePage() {
   );
 }
 
-function Metric({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div
       style={{
         background: "rgba(2, 6, 23, 0.55)",
-        border:
-          "1px solid rgba(148, 163, 184, 0.18)",
+        border: "1px solid rgba(148, 163, 184, 0.18)",
         borderRadius: 14,
         padding: 14,
       }}
     >
-      <div
-        style={{
-          color: "#94a3b8",
-          fontSize: 13,
-        }}
-      >
-        {label}
-      </div>
+      <div style={{ color: "#94a3b8", fontSize: 13 }}>{label}</div>
 
       <div
         style={{
@@ -485,22 +406,13 @@ function ExportCard({
       onSubmit={() => setLoading(true)}
       style={{
         background: "rgba(15, 23, 42, 0.78)",
-        border:
-          "1px solid rgba(148, 163, 184, 0.25)",
+        border: "1px solid rgba(148, 163, 184, 0.25)",
         borderRadius: 18,
         padding: 22,
-        boxShadow:
-          "0 20px 50px rgba(0,0,0,0.25)",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
       }}
     >
-      <h2
-        style={{
-          fontSize: 22,
-          margin: 0,
-        }}
-      >
-        {title}
-      </h2>
+      <h2 style={{ fontSize: 22, margin: 0 }}>{title}</h2>
 
       <p
         style={{
@@ -538,15 +450,11 @@ function ExportCard({
           padding: "13px 16px",
           borderRadius: 12,
           border: "none",
-          background: loading
-            ? "#64748b"
-            : "#38bdf8",
+          background: loading ? "#64748b" : "#38bdf8",
           color: "#020617",
           fontWeight: 700,
           fontSize: 15,
-          cursor: loading
-            ? "not-allowed"
-            : "pointer",
+          cursor: loading ? "not-allowed" : "pointer",
         }}
       >
         {loading ? "Exporting..." : button}
@@ -555,31 +463,17 @@ function ExportCard({
   );
 }
 
-function Feature({
-  title,
-  text,
-}: {
-  title: string;
-  text: string;
-}) {
+function Feature({ title, text }: { title: string; text: string }) {
   return (
     <div
       style={{
         background: "rgba(2, 6, 23, 0.55)",
-        border:
-          "1px solid rgba(148, 163, 184, 0.18)",
+        border: "1px solid rgba(148, 163, 184, 0.18)",
         borderRadius: 16,
         padding: 18,
       }}
     >
-      <h3
-        style={{
-          margin: 0,
-          fontSize: 17,
-        }}
-      >
-        {title}
-      </h3>
+      <h3 style={{ margin: 0, fontSize: 17 }}>{title}</h3>
 
       <p
         style={{

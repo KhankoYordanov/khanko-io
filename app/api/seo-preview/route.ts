@@ -14,8 +14,7 @@ async function fetchHtml(url: string) {
     const response = await axios.get(url, {
       timeout: 15000,
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; KHANKO.io SEO Preview/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; KHANKO.io SEO Preview/1.0)",
       },
     });
 
@@ -30,8 +29,7 @@ async function getSitemapUrls(baseUrl: URL) {
     const response = await axios.get(sitemapUrl, {
       timeout: 15000,
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; KHANKO.io SEO Preview/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; KHANKO.io SEO Preview/1.0)",
       },
     });
 
@@ -59,7 +57,6 @@ function extractSEO(html: string) {
   $("script, style, noscript").remove();
 
   const title = cleanText($("title").first().text());
-
   const h1 = cleanText($("h1").first().text());
 
   const metaDescription = cleanText(
@@ -85,17 +82,50 @@ function extractSEO(html: string) {
   };
 }
 
+function buildStatusMessage({
+  pagesChecked,
+  errors,
+}: {
+  pagesChecked: number;
+  errors: number;
+}) {
+  if (pagesChecked === 0) {
+    return {
+      status: "failed",
+      message:
+        "No pages could be analyzed. The website may block crawlers or require special rendering.",
+    };
+  }
+
+  if (errors === 0) {
+    return {
+      status: "success",
+      message: "Analysis completed successfully.",
+    };
+  }
+
+  if (errors >= pagesChecked) {
+    return {
+      status: "failed",
+      message:
+        "All pages failed to analyze. The website may block automated access.",
+    };
+  }
+
+  return {
+    status: "partial",
+    message:
+      "Partial result. Some pages could not be analyzed, so the report may be incomplete.",
+  };
+}
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-
     const url = formData.get("url") as string;
 
     if (!url) {
-      return NextResponse.json(
-        { error: "Missing URL" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing URL" }, { status: 400 });
     }
 
     const baseUrl = new URL(url);
@@ -109,7 +139,6 @@ export async function POST(req: Request) {
     urlsToVisit = Array.from(new Set(urlsToVisit)).slice(0, 20);
 
     const visited = new Set<string>();
-
     const titles: string[] = [];
 
     let errors = 0;
@@ -127,20 +156,12 @@ export async function POST(req: Request) {
 
       try {
         const html = await fetchHtml(currentUrl);
-
         const seo = extractSEO(html);
 
         if (!seo.title) missingTitles++;
-
         if (!seo.h1) missingH1++;
-
-        if (!seo.metaDescription) {
-          missingMetaDescriptions++;
-        }
-
-        if (seo.wordCount < 150) {
-          thinPages++;
-        }
+        if (!seo.metaDescription) missingMetaDescriptions++;
+        if (seo.wordCount < 150) thinPages++;
 
         if (seo.title) {
           titles.push(seo.title);
@@ -152,11 +173,15 @@ export async function POST(req: Request) {
 
     const duplicateTitles =
       titles.length -
-      new Set(
-        titles.map((title) => title.toLowerCase())
-      ).size;
+      new Set(titles.map((title) => title.toLowerCase())).size;
+
+    const statusInfo = buildStatusMessage({
+      pagesChecked: visited.size,
+      errors,
+    });
 
     return NextResponse.json({
+      ...statusInfo,
       pagesChecked: visited.size,
       errors,
       thinPages,

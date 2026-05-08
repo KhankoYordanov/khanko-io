@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 export default function HomePage() {
   return (
     <main
@@ -10,12 +14,7 @@ export default function HomePage() {
         padding: "56px 24px",
       }}
     >
-      <section
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-        }}
-      >
+      <section style={{ maxWidth: 1100, margin: "0 auto" }}>
         <p
           style={{
             color: "#38bdf8",
@@ -54,6 +53,21 @@ export default function HomePage() {
 
         <div
           style={{
+            marginTop: 24,
+            padding: 16,
+            borderRadius: 16,
+            background: "rgba(2, 6, 23, 0.55)",
+            border: "1px solid rgba(148, 163, 184, 0.18)",
+            color: "#cbd5e1",
+            maxWidth: 760,
+          }}
+        >
+          Current MVP limits: up to 20 sitemap URLs, same-domain crawling only,
+          static HTML extraction.
+        </div>
+
+        <div
+          style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: 20,
@@ -82,6 +96,10 @@ export default function HomePage() {
           />
         </div>
 
+        <div style={{ marginTop: 28, color: "#94a3b8" }}>
+          Try examples: https://example.com or https://khanko.tools
+        </div>
+
         <div
           style={{
             marginTop: 44,
@@ -95,6 +113,18 @@ export default function HomePage() {
           <Feature title="Same-domain only" text="Avoids external links and unsafe crawling." />
           <Feature title="Business exports" text="Built for translation, SEO, migration, and AI workflows." />
         </div>
+
+        <footer
+          style={{
+            marginTop: 56,
+            paddingTop: 24,
+            borderTop: "1px solid rgba(148, 163, 184, 0.18)",
+            color: "#64748b",
+            fontSize: 14,
+          }}
+        >
+          KHANKO.io — Website Content Extraction Platform
+        </footer>
       </section>
     </main>
   );
@@ -111,10 +141,13 @@ function ExportCard({
   action: string;
   button: string;
 }) {
+  const [loading, setLoading] = useState(false);
+
   return (
     <form
       method="POST"
       action={action}
+      onSubmit={() => setLoading(true)}
       style={{
         background: "rgba(15, 23, 42, 0.78)",
         border: "1px solid rgba(148, 163, 184, 0.25)",
@@ -155,19 +188,20 @@ function ExportCard({
 
       <button
         type="submit"
+        disabled={loading}
         style={{
           width: "100%",
           padding: "13px 16px",
           borderRadius: 12,
           border: "none",
-          background: "#38bdf8",
+          background: loading ? "#64748b" : "#38bdf8",
           color: "#020617",
           fontWeight: 700,
           fontSize: 15,
-          cursor: "pointer",
+          cursor: loading ? "not-allowed" : "pointer",
         }}
       >
-        {button}
+        {loading ? "Exporting..." : button}
       </button>
     </form>
   );

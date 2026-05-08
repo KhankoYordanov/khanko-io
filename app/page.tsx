@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 type SeoPreview = {
+  status: string;
+  message: string;
   pagesChecked: number;
   errors: number;
   thinPages: number;
@@ -167,39 +169,93 @@ export default function HomePage() {
           </form>
 
           {previewError && (
-            <p style={{ color: "#f87171", marginTop: 16 }}>{previewError}</p>
+            <p style={{ color: "#f87171", marginTop: 16 }}>
+              {previewError}
+            </p>
           )}
 
           {preview && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: 12,
-                marginTop: 22,
-              }}
-            >
-              <Metric label="Pages checked" value={preview.pagesChecked} />
-              <Metric label="Errors" value={preview.errors} />
-              <Metric label="Thin pages" value={preview.thinPages} />
-              <Metric label="Missing titles" value={preview.missingTitles} />
-              <Metric label="Missing H1" value={preview.missingH1} />
-              <Metric
-                label="Missing meta"
-                value={preview.missingMetaDescriptions}
-              />
-              <Metric
-                label="Duplicate titles"
-                value={preview.duplicateTitles}
-              />
-            </div>
+            <>
+              <div
+                style={{
+                  marginTop: 18,
+                  padding: 16,
+                  borderRadius: 14,
+                  background:
+                    preview.status === "success"
+                      ? "rgba(34,197,94,0.15)"
+                      : preview.status === "partial"
+                      ? "rgba(234,179,8,0.15)"
+                      : "rgba(239,68,68,0.15)",
+                  border:
+                    preview.status === "success"
+                      ? "1px solid rgba(34,197,94,0.35)"
+                      : preview.status === "partial"
+                      ? "1px solid rgba(234,179,8,0.35)"
+                      : "1px solid rgba(239,68,68,0.35)",
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 6,
+                    textTransform: "uppercase",
+                    fontSize: 13,
+                    letterSpacing: 1,
+                  }}
+                >
+                  {preview.status}
+                </div>
+
+                <div style={{ color: "#dbeafe" }}>
+                  {preview.message}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(150px, 1fr))",
+                  gap: 12,
+                  marginTop: 22,
+                }}
+              >
+                <Metric
+                  label="Pages checked"
+                  value={preview.pagesChecked}
+                />
+                <Metric label="Errors" value={preview.errors} />
+                <Metric
+                  label="Thin pages"
+                  value={preview.thinPages}
+                />
+                <Metric
+                  label="Missing titles"
+                  value={preview.missingTitles}
+                />
+                <Metric
+                  label="Missing H1"
+                  value={preview.missingH1}
+                />
+                <Metric
+                  label="Missing meta"
+                  value={preview.missingMetaDescriptions}
+                />
+                <Metric
+                  label="Duplicate titles"
+                  value={preview.duplicateTitles}
+                />
+              </div>
+            </>
           )}
         </section>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(260px, 1fr))",
             gap: 20,
             marginTop: 40,
           }}
@@ -241,7 +297,8 @@ export default function HomePage() {
           style={{
             marginTop: 44,
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(220px, 1fr))",
             gap: 16,
           }}
         >
@@ -279,7 +336,13 @@ export default function HomePage() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
   return (
     <div
       style={{
@@ -289,8 +352,17 @@ function Metric({ label, value }: { label: string; value: number }) {
         padding: 14,
       }}
     >
-      <div style={{ color: "#94a3b8", fontSize: 13 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, marginTop: 6 }}>
+      <div style={{ color: "#94a3b8", fontSize: 13 }}>
+        {label}
+      </div>
+
+      <div
+        style={{
+          fontSize: 28,
+          fontWeight: 800,
+          marginTop: 6,
+        }}
+      >
         {value}
       </div>
     </div>
@@ -323,7 +395,9 @@ function ExportCard({
         boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
       }}
     >
-      <h2 style={{ fontSize: 22, margin: 0 }}>{title}</h2>
+      <h2 style={{ fontSize: 22, margin: 0 }}>
+        {title}
+      </h2>
 
       <p
         style={{
@@ -365,7 +439,9 @@ function ExportCard({
           color: "#020617",
           fontWeight: 700,
           fontSize: 15,
-          cursor: loading ? "not-allowed" : "pointer",
+          cursor: loading
+            ? "not-allowed"
+            : "pointer",
         }}
       >
         {loading ? "Exporting..." : button}
@@ -374,7 +450,13 @@ function ExportCard({
   );
 }
 
-function Feature({ title, text }: { title: string; text: string }) {
+function Feature({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
   return (
     <div
       style={{
@@ -384,8 +466,18 @@ function Feature({ title, text }: { title: string; text: string }) {
         padding: 18,
       }}
     >
-      <h3 style={{ margin: 0, fontSize: 17 }}>{title}</h3>
-      <p style={{ color: "#94a3b8", lineHeight: 1.5 }}>{text}</p>
+      <h3 style={{ margin: 0, fontSize: 17 }}>
+        {title}
+      </h3>
+
+      <p
+        style={{
+          color: "#94a3b8",
+          lineHeight: 1.5,
+        }}
+      >
+        {text}
+      </p>
     </div>
   );
 }

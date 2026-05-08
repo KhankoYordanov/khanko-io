@@ -1,0 +1,199 @@
+import { NextResponse } from "next/server";
+import axios from "axios";
+import * as cheerio from "cheerio";
+import * as XLSX from "xlsx";
+
+function cleanText(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
+}
+
+function isUsefulText(text: string) {
+  const cleaned = cleanText(text);
+
+  if (cleaned.length < 40) return false;
+  if (cleaned.length > 5000) return false;
+
+  return true;
+}
+
+async function fetchPage(url: string) {
+  const response = await axios.get(url, {
+    timeout: 15000,
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (compatible; KHANKO.io Website Exporter/1.0)",
+    },
+  });
+
+  return response.data;
+}
+
+function extractInternalLinks(
+  html: string,
+  baseUrl: URL
+): string[] {
+  const $ = cheerio.load(html);
+
+  const links = $("a")
+    .map((_, el) => $(el).attr("href"))
+    .get()
+    .filter(Boolean);
+
+  const internalLinks = new Set<string>();
+
+  for (const href of links) {
+    try {
+      const fullUrl = new URL(href!, baseUrl);
+
+      if (fullUrl.hostname !== baseUrl.hostname) {
+        continue;
+      }
+
+      if (
+        /\.(pdf|jpg|jpeg|png|gif|webp|zip)$/i.test(
+          fullUrl.pathname
+        )
+      ) {
+        continue;
+      }
+
+      internalLinks.add(fullUrl.toString());
+    } catch {
+      continue;
+    }
+  }
+
+  return Array.from(internalLinks).slice(0, 5);
+}
+
+function extractContent(html: string) {
+  const $ = cheerio.load(html);
+
+  $(
+    "script, style, noscript, svg, canvas, iframe, nav, footer, header, form, button, input, select, textarea, aside"
+  ).remove();
+
+  const title =
+    cleanText($("title").first().text()) ||
+    "Website Export";
+
+  const h1 = cleanText($("h1").first().text());
+
+  const paragraphs = $("main p, article p, section p, p")
+    .map((_, el) => cleanText($(el).text()))
+    .get()
+    .filter((text) => isUsefulText(text))
+    .slice(0, 40);
+
+  const content = paragraphs.join("\n\n");
+
+  return {
+    title,
+    h1,
+    content,
+    wordCount: content.split(/\s+/).length,
+  };
+}
+
+export async function POST(req: Request) {
+  try {
+    const formData = await req.formData();
+
+    const url = formData.get("url") as string;
+
+    if (!url) {
+      return NextResponse.json(
+        { error: "Missing URL" },
+        { status: 400 }
+      );
+    }
+
+    const baseUrl = new URL(url);
+
+    const visited = new Set<string>();
+
+    const urlsToVisit: string[] = [url];
+
+    const rows: any[] = [];
+
+    while (urlsToVisit.length > 0 && visited.size < 5) {
+      const currentUrl = urlsToVisit.shift()!;
+
+      if (visited.has(currentUrl)) {
+        continue;
+      }
+
+      visited.add(currentUrl);
+
+      try {
+        const html = await fetchPage(currentUrl);
+
+        const {
+          title,
+          h1,
+          content,
+          wordCount,
+        } = extractContent(html);
+
+        rows.push({
+          URL: currentUrl,
+          Title: title,
+          H1: h1,
+          WordCount: wordCount,
+          Content: content,
+        });
+
+        const links = extractInternalLinks(
+          html,
+          baseUrl
+        );
+
+        links.forEach((link) => {
+          if (
+            !visited.has(link) &&
+            urlsToVisit.length < 10
+          ) {
+            urlsToVisit.push(link);
+          }
+        });
+      } catch (err) {
+        console.error("Failed:", currentUrl, err);
+      }
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    const worksheet =
+      XLSX.utils.json_to_sheet(rows);
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Website Export"
+    );
+
+    const buffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
+
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition":
+          'attachment; filename="website-export.xlsx"',
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Failed to export XLSX" },
+      { status: 500 }
+    );
+  }
+}

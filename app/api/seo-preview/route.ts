@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import axios from "axios";
 import * as cheerio from "cheerio";
 import { fetchRenderedHtml } from "../../lib/fetchRenderedHtml";
 
@@ -7,14 +8,34 @@ function cleanText(text: string) {
 }
 
 async function fetchHtml(url: string) {
-  return await fetchRenderedHtml(url);
+  try {
+    return await fetchRenderedHtml(url);
+  } catch {
+    const response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; KHANKO.io SEO Preview/1.0)",
+      },
+    });
+
+    return response.data;
+  }
 }
 
 async function getSitemapUrls(baseUrl: URL) {
   try {
     const sitemapUrl = `${baseUrl.origin}/sitemap.xml`;
 
-    const xml = await fetchHtml(sitemapUrl);
+    const response = await axios.get(sitemapUrl, {
+      timeout: 15000,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; KHANKO.io SEO Preview/1.0)",
+      },
+    });
+
+    const xml = response.data as string;
 
     return Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g))
       .map((match) => match[1])
@@ -84,6 +105,8 @@ export async function POST(req: Request) {
     if (urlsToVisit.length === 0) {
       urlsToVisit = [url];
     }
+
+    urlsToVisit = Array.from(new Set(urlsToVisit)).slice(0, 20);
 
     const visited = new Set<string>();
 

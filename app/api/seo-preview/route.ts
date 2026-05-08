@@ -175,7 +175,6 @@ export async function POST(req: Request) {
     }
 
     urlsToVisit = Array.from(new Set(urlsToVisit)).slice(0, 20);
-
     urlsToVisit.forEach((item) => queued.add(item));
 
     const titles: string[] = [];
@@ -241,6 +240,7 @@ export async function POST(req: Request) {
       missingH1,
       missingMetaDescriptions,
       duplicateTitles,
+      discoveredUrls: Array.from(visited),
     });
   } catch (error) {
     console.error(error);

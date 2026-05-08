@@ -7,6 +7,7 @@ import {
   Paragraph,
   HeadingLevel,
   PageBreak,
+  TextRun,
 } from "docx";
 
 function cleanText(text: string) {
@@ -19,7 +20,7 @@ function cleanText(text: string) {
 function isUsefulText(text: string) {
   const cleaned = cleanText(text);
 
-  if (cleaned.length < 45) return false;
+  if (cleaned.length < 40) return false;
   if (cleaned.length > 3000) return false;
 
   const lower = cleaned.toLowerCase();
@@ -33,17 +34,13 @@ function isUsefulText(text: string) {
     "sign up",
     "login",
     "log in",
-    "menu",
-    "navigation",
     "copyright",
     "all rights reserved",
   ];
 
-  if (noiseWords.some((word) => lower.includes(word))) {
-    return false;
-  }
-
-  return true;
+  return !noiseWords.some((word) =>
+    lower.includes(word)
+  );
 }
 
 async function fetchPage(url: string) {
@@ -80,10 +77,9 @@ function extractInternalLinks(
       }
 
       if (
-        fullUrl.pathname.includes(".pdf") ||
-        fullUrl.pathname.includes(".jpg") ||
-        fullUrl.pathname.includes(".png") ||
-        fullUrl.pathname.includes(".zip")
+        /\.(pdf|jpg|jpeg|png|gif|webp|zip)$/i.test(
+          fullUrl.pathname
+        )
       ) {
         continue;
       }
@@ -104,13 +100,29 @@ function extractContent(html: string) {
     "script, style, noscript, svg, canvas, iframe, nav, footer, header, form, button, input, select, textarea, aside"
   ).remove();
 
-  $("[aria-hidden='true']").remove();
-  $("[hidden]").remove();
-
   const title =
-    cleanText($("title").first().text()) || "Website Export";
+    cleanText($("title").first().text()) ||
+    "Website Export";
 
   const h1 = cleanText($("h1").first().text());
+
+  const h2s = $("h2")
+    .map((_, el) => cleanText($(el).text()))
+    .get()
+    .filter((text) => text.length > 3)
+    .slice(0, 10);
+
+  const h3s = $("h3")
+    .map((_, el) => cleanText($(el).text()))
+    .get()
+    .filter((text) => text.length > 3)
+    .slice(0, 10);
+
+  const lists = $("li")
+    .map((_, el) => cleanText($(el).text()))
+    .get()
+    .filter((text) => isUsefulText(text))
+    .slice(0, 20);
 
   const seen = new Set<string>();
 
@@ -133,6 +145,9 @@ function extractContent(html: string) {
   return {
     title,
     h1,
+    h2s,
+    h3s,
+    lists,
     paragraphs,
   };
 }
@@ -170,8 +185,14 @@ export async function POST(req: Request) {
       try {
         const html = await fetchPage(currentUrl);
 
-        const { title, h1, paragraphs } =
-          extractContent(html);
+        const {
+          title,
+          h1,
+          h2s,
+          h3s,
+          lists,
+          paragraphs,
+        } = extractContent(html);
 
         children.push(
           new Paragraph({
@@ -183,6 +204,9 @@ export async function POST(req: Request) {
           new Paragraph({
             text: currentUrl,
             heading: HeadingLevel.HEADING_2,
+            spacing: {
+              after: 200,
+            },
           })
         );
 
@@ -190,6 +214,9 @@ export async function POST(req: Request) {
           new Paragraph({
             text: title,
             heading: HeadingLevel.TITLE,
+            spacing: {
+              after: 300,
+            },
           })
         );
 
@@ -198,17 +225,73 @@ export async function POST(req: Request) {
             new Paragraph({
               text: h1,
               heading: HeadingLevel.HEADING_1,
+              spacing: {
+                after: 200,
+              },
             })
           );
         }
 
-        paragraphs.forEach((text) => {
+        h2s.forEach((text) => {
           children.push(
             new Paragraph({
               text,
+              heading: HeadingLevel.HEADING_2,
+              spacing: {
+                before: 200,
+                after: 100,
+              },
             })
           );
         });
+
+        h3s.forEach((text) => {
+          children.push(
+            new Paragraph({
+              text,
+              heading: HeadingLevel.HEADING_3,
+              spacing: {
+                before: 150,
+                after: 80,
+              },
+            })
+          );
+        });
+
+        paragraphs.forEach((text) => {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text,
+                }),
+              ],
+              spacing: {
+                after: 120,
+              },
+            })
+          );
+        });
+
+        if (lists.length > 0) {
+          children.push(
+            new Paragraph({
+              text: "List Items",
+              heading: HeadingLevel.HEADING_2,
+            })
+          );
+
+          lists.forEach((item) => {
+            children.push(
+              new Paragraph({
+                text: `• ${item}`,
+                spacing: {
+                  after: 80,
+                },
+              })
+            );
+          });
+        }
 
         const links = extractInternalLinks(
           html,

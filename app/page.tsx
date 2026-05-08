@@ -63,7 +63,7 @@ export default function HomePage() {
           }}
         >
           Current MVP limits: up to 20 sitemap URLs, same-domain crawling only,
-          static HTML extraction.
+          static + rendered HTML extraction.
         </div>
 
         <div
@@ -94,6 +94,13 @@ export default function HomePage() {
             action="/api/export-translation-xlsx"
             button="Export Translation XLSX"
           />
+
+          <ExportCard
+            title="SEO Audit XLSX"
+            description="Export page-level SEO checks: titles, H1, meta description, word count, thin pages, and duplicates."
+            action="/api/export-seo-audit"
+            button="Export SEO Audit"
+          />
         </div>
 
         <div style={{ marginTop: 28, color: "#94a3b8" }}>
@@ -111,7 +118,7 @@ export default function HomePage() {
           <Feature title="Sitemap crawling" text="Uses sitemap.xml when available." />
           <Feature title="Clean extraction" text="Removes scripts, nav, footer, forms, and noise." />
           <Feature title="Same-domain only" text="Avoids external links and unsafe crawling." />
-          <Feature title="Business exports" text="Built for translation, SEO, migration, and AI workflows." />
+          <Feature title="SEO audit mode" text="Find thin pages, missing tags, and duplicate page signals." />
         </div>
 
         <footer
@@ -162,7 +169,7 @@ function ExportCard({
         style={{
           color: "#cbd5e1",
           lineHeight: 1.55,
-          minHeight: 74,
+          minHeight: 96,
         }}
       >
         {description}

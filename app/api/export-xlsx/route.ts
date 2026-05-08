@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import axios from "axios";
 import * as cheerio from "cheerio";
 import * as XLSX from "xlsx";
+import { fetchRenderedHtml } from "@/app/lib/fetchRenderedHtml";
 
 function cleanText(text: string) {
   return text
@@ -20,26 +20,15 @@ function isUsefulText(text: string) {
 }
 
 async function fetchPage(url: string) {
-  const response = await axios.get(url, {
-    timeout: 15000,
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (compatible; KHANKO.io Website Exporter/1.0)",
-    },
-  });
-
-  return response.data;
+  return await fetchRenderedHtml(url);
 }
 
 async function extractSitemapUrls(baseUrl: URL) {
   try {
     const sitemapUrl = `${baseUrl.origin}/sitemap.xml`;
-
     const xml = await fetchPage(sitemapUrl);
 
-    const urls = Array.from(
-      xml.matchAll(/<loc>(.*?)<\/loc>/g)
-    )
+    const urls = Array.from(xml.matchAll(/<loc>(.*?)<\/loc>/g))
       .map((match) => match[1])
       .filter((url) => {
         try {
@@ -56,10 +45,7 @@ async function extractSitemapUrls(baseUrl: URL) {
   }
 }
 
-function extractInternalLinks(
-  html: string,
-  baseUrl: URL
-): string[] {
+function extractInternalLinks(html: string, baseUrl: URL): string[] {
   const $ = cheerio.load(html);
 
   const links = $("a")
@@ -73,15 +59,9 @@ function extractInternalLinks(
     try {
       const fullUrl = new URL(href!, baseUrl);
 
-      if (fullUrl.hostname !== baseUrl.hostname) {
-        continue;
-      }
+      if (fullUrl.hostname !== baseUrl.hostname) continue;
 
-      if (
-        /\.(pdf|jpg|jpeg|png|gif|webp|zip)$/i.test(
-          fullUrl.pathname
-        )
-      ) {
+      if (/\.(pdf|jpg|jpeg|png|gif|webp|zip)$/i.test(fullUrl.pathname)) {
         continue;
       }
 
@@ -101,9 +81,7 @@ function extractContent(html: string) {
     "script, style, noscript, svg, canvas, iframe, nav, footer, header, form, button, input, select, textarea, aside"
   ).remove();
 
-  const title =
-    cleanText($("title").first().text()) ||
-    "Website Export";
+  const title = cleanText($("title").first().text()) || "Website Export";
 
   const h1 = cleanText($("h1").first().text());
 
@@ -124,9 +102,7 @@ function extractContent(html: string) {
     h1,
     metaDescription,
     content,
-    wordCount: content
-      ? content.split(/\s+/).filter(Boolean).length
-      : 0,
+    wordCount: content ? content.split(/\s+/).filter(Boolean).length : 0,
   };
 }
 
@@ -136,10 +112,7 @@ export async function POST(req: Request) {
     const url = formData.get("url") as string;
 
     if (!url) {
-      return NextResponse.json(
-        { error: "Missing URL" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing URL" }, { status: 400 });
     }
 
     const baseUrl = new URL(url);
@@ -147,8 +120,7 @@ export async function POST(req: Request) {
     const visited = new Set<string>();
     const sitemapUrls = await extractSitemapUrls(baseUrl);
 
-    const urlsToVisit: string[] =
-      sitemapUrls.length > 0 ? sitemapUrls : [url];
+    const urlsToVisit: string[] = sitemapUrls.length > 0 ? sitemapUrls : [url];
 
     const rows: {
       URL: string;
@@ -162,22 +134,15 @@ export async function POST(req: Request) {
     while (urlsToVisit.length > 0 && visited.size < 20) {
       const currentUrl = urlsToVisit.shift()!;
 
-      if (visited.has(currentUrl)) {
-        continue;
-      }
+      if (visited.has(currentUrl)) continue;
 
       visited.add(currentUrl);
 
       try {
         const html = await fetchPage(currentUrl);
 
-        const {
-          title,
-          h1,
-          metaDescription,
-          content,
-          wordCount,
-        } = extractContent(html);
+        const { title, h1, metaDescription, content, wordCount } =
+          extractContent(html);
 
         rows.push({
           URL: currentUrl,
@@ -209,11 +174,7 @@ export async function POST(req: Request) {
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(rows);
 
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Website Export"
-    );
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Website Export");
 
     const buffer = XLSX.write(workbook, {
       type: "buffer",
@@ -224,8 +185,7 @@ export async function POST(req: Request) {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition":
-          'attachment; filename="website-export.xlsx"',
+        "Content-Disposition": 'attachment; filename="website-export.xlsx"',
       },
     });
   } catch (error) {

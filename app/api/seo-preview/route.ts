@@ -177,15 +177,20 @@ function buildStatusMessage({
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
+
     const url = formData.get("url") as string;
 
     if (!url) {
-      return NextResponse.json({ error: "Missing URL" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing URL" },
+        { status: 400 }
+      );
     }
 
     const baseUrl = new URL(url);
 
     const visited = new Set<string>();
+
     const queued = new Set<string>();
 
     let urlsToVisit = await getSitemapUrls(baseUrl);
@@ -194,11 +199,19 @@ export async function POST(req: Request) {
       urlsToVisit = [url];
     }
 
-    urlsToVisit = Array.from(new Set(urlsToVisit)).slice(0, 20);
+    urlsToVisit = Array.from(new Set(urlsToVisit)).slice(
+      0,
+      20
+    );
 
     urlsToVisit.forEach((item) => queued.add(item));
 
     const titles: string[] = [];
+
+    const pageIssues: {
+      url: string;
+      issues: string[];
+    }[] = [];
 
     let errors = 0;
     let thinPages = 0;
@@ -206,7 +219,10 @@ export async function POST(req: Request) {
     let missingH1 = 0;
     let missingMetaDescriptions = 0;
 
-    while (urlsToVisit.length > 0 && visited.size < 20) {
+    while (
+      urlsToVisit.length > 0 &&
+      visited.size < 20
+    ) {
       const currentUrl = urlsToVisit.shift()!;
 
       if (visited.has(currentUrl)) continue;
@@ -218,16 +234,35 @@ export async function POST(req: Request) {
 
         const seo = extractSEO(html);
 
-        if (!seo.title) missingTitles++;
+        const currentIssues: string[] = [];
 
-        if (!seo.h1) missingH1++;
+        if (!seo.title) {
+          missingTitles++;
+          currentIssues.push("Missing title");
+        }
+
+        if (!seo.h1) {
+          missingH1++;
+          currentIssues.push("Missing H1");
+        }
 
         if (!seo.metaDescription) {
           missingMetaDescriptions++;
+          currentIssues.push(
+            "Missing meta description"
+          );
         }
 
         if (seo.wordCount < 150) {
           thinPages++;
+          currentIssues.push("Thin content");
+        }
+
+        if (currentIssues.length > 0) {
+          pageIssues.push({
+            url: currentUrl,
+            issues: currentIssues,
+          });
         }
 
         if (seo.title) {
@@ -257,7 +292,9 @@ export async function POST(req: Request) {
     const duplicateTitles =
       titles.length -
       new Set(
-        titles.map((title) => title.toLowerCase())
+        titles.map((title) =>
+          title.toLowerCase()
+        )
       ).size;
 
     const statusInfo = buildStatusMessage({
@@ -278,6 +315,7 @@ export async function POST(req: Request) {
       missingMetaDescriptions,
       duplicateTitles,
       discoveredUrls: Array.from(visited),
+      pageIssues,
     });
   } catch (error) {
     console.error(error);

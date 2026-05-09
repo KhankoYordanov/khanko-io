@@ -92,6 +92,7 @@ function extractSEO(html: string) {
   $("script, style, noscript").remove();
 
   const title = cleanText($("title").first().text());
+
   const h1 = cleanText($("h1").first().text());
 
   const metaDescription = cleanText(
@@ -120,22 +121,26 @@ function extractSEO(html: string) {
 function buildStatusMessage({
   pagesChecked,
   errors,
+  missingTitles,
+  missingH1,
+  missingMetaDescriptions,
 }: {
   pagesChecked: number;
   errors: number;
+  missingTitles: number;
+  missingH1: number;
+  missingMetaDescriptions: number;
 }) {
+  const seoIssues =
+    missingTitles +
+    missingH1 +
+    missingMetaDescriptions;
+
   if (pagesChecked === 0) {
     return {
       status: "failed",
       message:
         "No pages could be analyzed. The website may block crawlers or require special rendering.",
-    };
-  }
-
-  if (errors === 0) {
-    return {
-      status: "success",
-      message: "Analysis completed successfully.",
     };
   }
 
@@ -147,10 +152,25 @@ function buildStatusMessage({
     };
   }
 
+  if (errors > 0) {
+    return {
+      status: "partial",
+      message:
+        "Partial result. Some pages could not be analyzed, so the report may be incomplete.",
+    };
+  }
+
+  if (seoIssues > 0) {
+    return {
+      status: "issues found",
+      message:
+        "The analysis completed, but SEO issues were detected on some pages.",
+    };
+  }
+
   return {
-    status: "partial",
-    message:
-      "Partial result. Some pages could not be analyzed, so the report may be incomplete.",
+    status: "success",
+    message: "Analysis completed successfully.",
   };
 }
 
@@ -175,6 +195,7 @@ export async function POST(req: Request) {
     }
 
     urlsToVisit = Array.from(new Set(urlsToVisit)).slice(0, 20);
+
     urlsToVisit.forEach((item) => queued.add(item));
 
     const titles: string[] = [];
@@ -194,18 +215,29 @@ export async function POST(req: Request) {
 
       try {
         const html = await fetchHtml(currentUrl);
+
         const seo = extractSEO(html);
 
         if (!seo.title) missingTitles++;
+
         if (!seo.h1) missingH1++;
-        if (!seo.metaDescription) missingMetaDescriptions++;
-        if (seo.wordCount < 150) thinPages++;
+
+        if (!seo.metaDescription) {
+          missingMetaDescriptions++;
+        }
+
+        if (seo.wordCount < 150) {
+          thinPages++;
+        }
 
         if (seo.title) {
           titles.push(seo.title);
         }
 
-        const internalLinks = extractInternalLinks(html, baseUrl);
+        const internalLinks = extractInternalLinks(
+          html,
+          baseUrl
+        );
 
         internalLinks.forEach((link) => {
           if (
@@ -224,11 +256,16 @@ export async function POST(req: Request) {
 
     const duplicateTitles =
       titles.length -
-      new Set(titles.map((title) => title.toLowerCase())).size;
+      new Set(
+        titles.map((title) => title.toLowerCase())
+      ).size;
 
     const statusInfo = buildStatusMessage({
       pagesChecked: visited.size,
       errors,
+      missingTitles,
+      missingH1,
+      missingMetaDescriptions,
     });
 
     return NextResponse.json({

@@ -81,6 +81,16 @@ export default function HomePage() {
     }
   }
 
+  const highConfidenceIssues =
+    preview?.pageIssues.filter(
+      (item) => item.confidence === "high"
+    ) || [];
+
+  const lowConfidenceIssues =
+    preview?.pageIssues.filter(
+      (item) => item.confidence === "low"
+    ) || [];
+
   return (
     <main
       style={{
@@ -314,7 +324,7 @@ export default function HomePage() {
                 />
               </div>
 
-              {preview.pageIssues.length > 0 && (
+              {highConfidenceIssues.length > 0 && (
                 <div
                   style={{
                     marginTop: 28,
@@ -324,122 +334,46 @@ export default function HomePage() {
                     style={{
                       marginBottom: 14,
                       fontSize: 18,
+                      color: "#86efac",
                     }}
                   >
-                    Page Issues
+                    High Confidence Issues
+                  </h3>
+
+                  <IssueList items={highConfidenceIssues} />
+                </div>
+              )}
+
+              {lowConfidenceIssues.length > 0 && (
+                <div
+                  style={{
+                    marginTop: 28,
+                  }}
+                >
+                  <h3
+                    style={{
+                      marginBottom: 14,
+                      fontSize: 18,
+                      color: "#fca5a5",
+                    }}
+                  >
+                    Low Confidence Issues
                   </h3>
 
                   <div
                     style={{
-                      display: "grid",
-                      gap: 10,
+                      marginBottom: 14,
+                      color: "#94a3b8",
+                      fontSize: 14,
+                      lineHeight: 1.5,
                     }}
                   >
-                    {preview.pageIssues.map((item) => (
-                      <div
-                        key={item.url}
-                        title={item.url}
-                        style={{
-                          padding: "12px 14px",
-                          borderRadius: 12,
-                          background:
-                            "rgba(2, 6, 23, 0.55)",
-                          border:
-                            item.confidence === "high"
-                              ? "1px solid rgba(249,115,22,0.25)"
-                              : "1px solid rgba(239,68,68,0.30)",
-                          color: "#cbd5e1",
-                          fontSize: 14,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent:
-                              "space-between",
-                            alignItems: "center",
-                            gap: 12,
-                            flexWrap: "wrap",
-                            marginBottom: 8,
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontWeight: 700,
-                              overflowWrap:
-                                "break-word",
-                            }}
-                          >
-                            {formatDiscoveredUrl(
-                              item.url
-                            )}
-                          </div>
-
-                          <div
-                            style={{
-                              padding:
-                                "4px 8px",
-                              borderRadius:
-                                999,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              textTransform:
-                                "uppercase",
-                              background:
-                                item.confidence ===
-                                "high"
-                                  ? "rgba(34,197,94,0.15)"
-                                  : "rgba(239,68,68,0.15)",
-                              border:
-                                item.confidence ===
-                                "high"
-                                  ? "1px solid rgba(34,197,94,0.35)"
-                                  : "1px solid rgba(239,68,68,0.35)",
-                              color:
-                                item.confidence ===
-                                "high"
-                                  ? "#86efac"
-                                  : "#fca5a5",
-                            }}
-                          >
-                            {item.confidence} confidence
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 8,
-                          }}
-                        >
-                          {item.issues.map(
-                            (issue) => (
-                              <span
-                                key={issue}
-                                style={{
-                                  padding:
-                                    "5px 8px",
-                                  borderRadius:
-                                    999,
-                                  background:
-                                    "rgba(249,115,22,0.18)",
-                                  border:
-                                    "1px solid rgba(249,115,22,0.35)",
-                                  color:
-                                    "#fed7aa",
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {issue}
-                              </span>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    These pages may have rendering or crawler
+                    limitations. Verify manually before assuming SEO
+                    issues.
                   </div>
+
+                  <IssueList items={lowConfidenceIssues} />
                 </div>
               )}
 
@@ -588,6 +522,79 @@ export default function HomePage() {
         </footer>
       </section>
     </main>
+  );
+}
+
+function IssueList({
+  items,
+}: {
+  items: {
+    url: string;
+    issues: string[];
+    confidence: "high" | "low";
+  }[];
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gap: 10,
+      }}
+    >
+      {items.map((item) => (
+        <div
+          key={item.url}
+          title={item.url}
+          style={{
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: "rgba(2, 6, 23, 0.55)",
+            border:
+              item.confidence === "high"
+                ? "1px solid rgba(249,115,22,0.25)"
+                : "1px solid rgba(239,68,68,0.30)",
+            color: "#cbd5e1",
+            fontSize: 14,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              marginBottom: 8,
+              overflowWrap: "break-word",
+            }}
+          >
+            {formatDiscoveredUrl(item.url)}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            {item.issues.map((issue) => (
+              <span
+                key={issue}
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 999,
+                  background: "rgba(249,115,22,0.18)",
+                  border:
+                    "1px solid rgba(249,115,22,0.35)",
+                  color: "#fed7aa",
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                {issue}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

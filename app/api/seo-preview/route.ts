@@ -211,6 +211,7 @@ export async function POST(req: Request) {
     const pageIssues: {
       url: string;
       issues: string[];
+      confidence: "high" | "low";
     }[] = [];
 
     let errors = 0;
@@ -259,9 +260,17 @@ export async function POST(req: Request) {
         }
 
         if (currentIssues.length > 0) {
+          const lowConfidence =
+            !seo.title &&
+            !seo.h1 &&
+            !seo.metaDescription;
+
           pageIssues.push({
             url: currentUrl,
             issues: currentIssues,
+            confidence: lowConfidence
+              ? "low"
+              : "high",
           });
         }
 

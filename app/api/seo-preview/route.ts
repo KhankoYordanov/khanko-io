@@ -7,6 +7,15 @@ function cleanText(text: string) {
   return text.replace(/\s+/g, " ").replace(/\u00a0/g, " ").trim();
 }
 
+function isSkippableUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return /\.(xml|json|txt|rss|atom)$/i.test(parsed.pathname);
+  } catch {
+    return true;
+  }
+}
+
 async function fetchHtml(url: string) {
   try {
     return await fetchRenderedHtml(url);
@@ -40,7 +49,11 @@ async function getSitemapUrls(baseUrl: URL) {
       .filter((url) => {
         try {
           const parsed = new URL(url);
-          return parsed.hostname === baseUrl.hostname;
+
+          if (parsed.hostname !== baseUrl.hostname) return false;
+          if (isSkippableUrl(url)) return false;
+
+          return true;
         } catch {
           return false;
         }
@@ -70,7 +83,7 @@ function extractInternalLinks(html: string, baseUrl: URL) {
       if (fullUrl.hostname !== baseUrl.hostname) continue;
 
       if (
-        /\.(pdf|jpg|jpeg|png|gif|webp|zip|mp4|mp3|svg|css|js)$/i.test(
+        /\.(pdf|jpg|jpeg|png|gif|webp|zip|mp4|mp3|svg|css|js|xml|json|txt|rss|atom)$/i.test(
           fullUrl.pathname
         )
       ) {
@@ -106,9 +119,7 @@ function extractSEO(html: string) {
 
   const content = paragraphs.join(" ");
 
-  const wordCount = content
-    ? content.split(/\s+/).filter(Boolean).length
-    : 0;
+  const wordCount = content ? content.split(/\s+/).filter(Boolean).length : 0;
 
   return {
     title,
@@ -131,16 +142,13 @@ function buildStatusMessage({
   missingH1: number;
   missingMetaDescriptions: number;
 }) {
-  const seoIssues =
-    missingTitles +
-    missingH1 +
-    missingMetaDescriptions;
+  const seoIssues = missingTitles + missingH1 + missingMetaDescriptions;
 
   if (pagesChecked === 0) {
     return {
       status: "failed",
       message:
-        "No pages could be analyzed. The website may block crawlers or require special rendering.",
+        "No pages could be analyzed. The website may block crawlers or expose only non-HTML URLs.",
     };
   }
 
@@ -181,16 +189,12 @@ export async function POST(req: Request) {
     const url = formData.get("url") as string;
 
     if (!url) {
-      return NextResponse.json(
-        { error: "Missing URL" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing URL" }, { status: 400 });
     }
 
     const baseUrl = new URL(url);
 
     const visited = new Set<string>();
-
     const queued = new Set<string>();
 
     let urlsToVisit = await getSitemapUrls(baseUrl);
@@ -199,10 +203,9 @@ export async function POST(req: Request) {
       urlsToVisit = [url];
     }
 
-    urlsToVisit = Array.from(new Set(urlsToVisit)).slice(
-      0,
-      20
-    );
+    urlsToVisit = Array.from(new Set(urlsToVisit))
+      .filter((item) => !isSkippableUrl(item))
+      .slice(0, 20);
 
     urlsToVisit.forEach((item) => queued.add(item));
 
@@ -220,13 +223,11 @@ export async function POST(req: Request) {
     let missingH1 = 0;
     let missingMetaDescriptions = 0;
 
-    while (
-      urlsToVisit.length > 0 &&
-      visited.size < 20
-    ) {
+    while (urlsToVisit.length > 0 && visited.size < 20) {
       const currentUrl = urlsToVisit.shift()!;
 
       if (visited.has(currentUrl)) continue;
+      if (isSkippableUrl(currentUrl)) continue;
 
       visited.add(currentUrl);
 
@@ -249,9 +250,7 @@ export async function POST(req: Request) {
 
         if (!seo.metaDescription) {
           missingMetaDescriptions++;
-          currentIssues.push(
-            "Missing meta description"
-          );
+          currentIssues.push("Missing meta description");
         }
 
         if (seo.wordCount < 150) {
@@ -261,16 +260,12 @@ export async function POST(req: Request) {
 
         if (currentIssues.length > 0) {
           const lowConfidence =
-            !seo.title &&
-            !seo.h1 &&
-            !seo.metaDescription;
+            !seo.title && !seo.h1 && !seo.metaDescription;
 
           pageIssues.push({
             url: currentUrl,
             issues: currentIssues,
-            confidence: lowConfidence
-              ? "low"
-              : "high",
+            confidence: lowConfidence ? "low" : "high",
           });
         }
 
@@ -278,15 +273,13 @@ export async function POST(req: Request) {
           titles.push(seo.title);
         }
 
-        const internalLinks = extractInternalLinks(
-          html,
-          baseUrl
-        );
+        const internalLinks = extractInternalLinks(html, baseUrl);
 
         internalLinks.forEach((link) => {
           if (
             !visited.has(link) &&
             !queued.has(link) &&
+            !isSkippableUrl(link) &&
             urlsToVisit.length + visited.size < 20
           ) {
             urlsToVisit.push(link);
@@ -300,11 +293,7 @@ export async function POST(req: Request) {
 
     const duplicateTitles =
       titles.length -
-      new Set(
-        titles.map((title) =>
-          title.toLowerCase()
-        )
-      ).size;
+      new Set(titles.map((title) => title.toLowerCase())).size;
 
     const statusInfo = buildStatusMessage({
       pagesChecked: visited.size,

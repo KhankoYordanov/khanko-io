@@ -123,7 +123,7 @@ export default function HomePage() {
             maxWidth: 820,
           }}
         >
-          Extract website content into clean DOCX and XLSX files
+          Website Content Extraction & SEO Audit Platform
         </h1>
 
         <p
@@ -135,9 +135,9 @@ export default function HomePage() {
             marginTop: 22,
           }}
         >
-          Crawl website pages, extract readable content, and export
-          structured files for translation, SEO audits, AI datasets,
-          and content migration.
+          Crawl websites, discover internal pages, extract structured
+          content, detect SEO issues, and export clean datasets for
+          translation, audits, AI pipelines, and content migration.
         </p>
 
         <div
@@ -151,8 +151,9 @@ export default function HomePage() {
             maxWidth: 760,
           }}
         >
-          Current MVP limits: up to 20 sitemap URLs, same-domain
-          crawling only, static + rendered HTML extraction.
+         Current MVP limits: up to 20 pages per scan, same-domain
+         crawling only, partial JavaScript rendering support, and
+         lightweight SEO analysis.
         </div>
 
         <section

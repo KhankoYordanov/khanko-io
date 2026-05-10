@@ -5,9 +5,20 @@ export const metadata = {
   description: "Website Content Extraction Platform",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <html lang="en">
+      <head>
+        <meta
+          name="google-site-verification"
+          content="K_yA-FEWx20aPJeZle-e8nyNXuIBymum1suOXXBf7KY"
+        />
+      </head>
+
       <body>{children}</body>
     </html>
   );
